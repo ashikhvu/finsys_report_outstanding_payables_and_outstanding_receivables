@@ -1075,6 +1075,9 @@ urlpatterns = [
     # ashikh------------------------------------------report outstanding payables-----------------------------------------
     path('Fin_report_account_outstanding_payables',views.Fin_report_account_outstanding_payables, name='Fin_report_account_outstanding_payables'),
     path('Fin_report_account_outstanding_payables_tomail',views.Fin_report_account_outstanding_payables_tomail, name='Fin_report_account_outstanding_payables_tomail'),
+    # ashikh------------------------------------------report outstanding receivable-----------------------------------------
+    path('Fin_report_account_outstanding_receivable',views.Fin_report_account_outstanding_receivable, name='Fin_report_account_outstanding_receivable'),
+    path('Fin_report_account_outstanding_receivable_tomail',views.Fin_report_account_outstanding_receivable_tomail, name='Fin_report_account_outstanding_receivable_tomail'),
     
 
     

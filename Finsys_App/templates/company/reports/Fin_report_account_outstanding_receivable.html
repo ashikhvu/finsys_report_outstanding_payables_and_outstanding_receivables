@@ -190,7 +190,7 @@
             <div class="card-title" id="div2">
                 <center>
                     <!-- <h5 style="padding-top: 10px;">{{cmp.Company_name}}</h5> -->
-                    <h2 class="text-uppercase" id="headline"> OUTSTANDING PAYABLES</h2>
+                    <h2 class="text-uppercase" id="headline"> OUTSTANDING RECEIVABLE</h2>
                 </center>
                 <hr>
             </div>
@@ -279,7 +279,7 @@
                                 <!-- <div id="ember2512" class="col-md-4 d-flex justify-content-start tooltip-container ember-view ribbon text-ellipsis"></div> -->
                                 <div class="col-12">
                                         <center class="h5 text-white"><b>{{cmp.Company_name}}</b></center>
-                                        <center class="h3 text-white"><b> OUTSTANDING PAYABLES</b></center>
+                                        <center class="h3 text-white"><b> OUTSTANDING RECEIVABLE</b></center>
                                         {% if startDate and endDate %}
                                         <center class="h6 text-white">{{startDate}} TO {{endDate}}</center>
                                         {% endif %}
@@ -293,7 +293,7 @@
                                         <table class="table table-responsive-md mt-4 table-hover" id="reportTable">
                                             <thead>
                                                 <tr>
-                                                    <th class="text-center">VENDOR NAME</th>
+                                                    <th class="text-center">CUSTOMER NAME</th>
                                                     <th class="text-center">PENDING AMOUNT</th>
                                                     <th class="text-center">PENDING BILLS</th>
                                                 </tr>
@@ -322,13 +322,13 @@
                                                     }
                                                 </style>
                                                 {% for i in all_data %}
-                                                <tr onclick="call_unhide_submodule(`{{ i.vendor_name }}{{ i.id }}`)" {% if forloop.last %}style="border-top:1px red black"{% else %}{% endif %}>
-                                                    <td class="my_border text-center p-1">{{i.vendor_name}}</td>
+                                                <tr onclick="call_unhide_submodule(`{{ i.customer_name }}{{ i.id }}`)" {% if forloop.last %}style="border-top:1px red black"{% else %}{% endif %}>
+                                                    <td class="my_border text-center p-1">{{i.customer_name}}</td>
                                                     <td class="my_border text-center p-1">{{i.tot_balance}}</td>
                                                     <td class="my_border text-center p-1">{{i.total_count}}</td>
                                                 </tr>
                                                     {% for j in i.sub_module  %}
-                                                    <tr style="display: none;" class="{{ i.vendor_name }}{{ i.id }}sub_mod my_top_border ">
+                                                    <tr style="display: none;" class="{{ i.customer_name }}{{ i.id }}sub_mod my_top_border ">
                                                         <td class="p-0 text-center text-danger bl {% if forloop.last %}  bb{% endif %}"><i><span class="pe-2">{{ j.object_module }}</span> - <span class="ps-5"><strong>{{ j.object_balance }}</strong></span></i></td>
                                                         <td class="p-0 text-center text-danger {% if forloop.last %}  bb{% endif %}"></td>
                                                         <td class="p-0 text-center text-danger br {% if forloop.last %} br bb{% endif %}"><i>{{ j.object_count }}</i></td>
@@ -352,7 +352,7 @@
                                         <div class="row p-4">
                                             <div class="col-10">
                                                 <div class="row mb-2">
-                                                    <div class="col-4">Total Vendors : <p style="font-size: 19px;">{{vendors_count|default:0}}</p>
+                                                    <div class="col-4">Total customers : <p style="font-size: 19px;">{{customers_count|default:0}}</p>
                                                     </div><br><br>
                                                 </div>
                                                 <!-- <div class="row ">
@@ -542,7 +542,7 @@
         var opt =
         {
             margin: [0.5, 0.3, 0.3, 0.5],
-            filename: 'Outstanding_Payables' + date,
+            filename: 'Outstanding_Receivable' + date,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2 },
             jsPDF: { unit: 'cm', format: 'letter', orientation: 'portrait' }
@@ -574,7 +574,7 @@
         const ws = XLSX.utils.table_to_sheet(Table);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-        XLSX.writeFile(wb, "Outstanding_Payables"+date+".xlsx");
+        XLSX.writeFile(wb, "Outstanding_Receivable"+date+".xlsx");
     }
 
     let sortOrder = false; // false for ascending, true for descending

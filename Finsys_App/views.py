@@ -51514,7 +51514,7 @@ def Fin_shareFin_trial_balanceToEmail(request):
 
 from django.db.models import F,Value,Count,CharField
 
-def Fin_report_account_outstanding_payables(request):
+def Fin_report_account_outstanding_receivable(request):
     if 's_id' in request.session:
         s_id = request.session['s_id']
         data = Fin_Login_Details.objects.get(id = s_id)
@@ -51534,28 +51534,27 @@ def Fin_report_account_outstanding_payables(request):
 
         all_data = []
         customers = Fin_Customers.objects.filter(Company=cmp)
-        customers_count = customers.count()
          
         pending_inv = list()
         all_inv_data = list()
-        grand_tot_balance=0
+        grand_tot_balance =customers_count =0
         for cust in customers:
 
             if request.method == "POST" and start_date!='' and end_date!='':
                 pending_inv = list(
                     Fin_Invoice.objects.filter(Company=cmp,Customer=cust,invoice_date__range=[start_date,end_date]).exclude(balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=F("invoice_no"),object_module_id=F("id"),object_balance=F('balance'))
                 )+list(
-                    Fin_Retainer_Invoice.objects.filter(Company=cmp,Customer=cust,Retainer_Invoice_date__range=[start_date,end_date]).exclude(Balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=Value("ret",output_field=CharField()),object_module_id=F("id"),object_balance=F('Balance'))
+                    Fin_Retainer_Invoice.objects.filter(Company=cmp,Customer=cust,Retainer_Invoice_date__range=[start_date,end_date]).exclude(Balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=F('Retainer_Invoice_number'),object_module_id=F("id"),object_balance=F('Balance'))
                 )+list(
-                    Fin_Recurring_Invoice.objects.filter(Company=cmp,Customer=cust,start_date__range=[start_date,end_date]).exclude(balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=Value("rec",output_field=CharField()),object_module_id=F("id"),object_balance=F('balance'))
+                    Fin_Recurring_Invoice.objects.filter(Company=cmp,Customer=cust,start_date__range=[start_date,end_date]).exclude(balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=F('rec_invoice_no'),object_module_id=F("id"),object_balance=F('balance'))
                 )
             else:
                 pending_inv = list(
                     Fin_Invoice.objects.filter(Company=cmp,Customer=cust).exclude(balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=F("invoice_no"),object_module_id=F("id"),object_balance=F('balance'))
                 )+list(
-                    Fin_Retainer_Invoice.objects.filter(Company=cmp,Customer=cust).exclude(Balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=Value("ret",output_field=CharField()),object_module_id=F("id"),object_balance=F('Balance'))
+                    Fin_Retainer_Invoice.objects.filter(Company=cmp,Customer=cust).exclude(Balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=F('Retainer_Invoice_number'),object_module_id=F("id"),object_balance=F('Balance'))
                 )+list(
-                    Fin_Recurring_Invoice.objects.filter(Company=cmp,Customer=cust).exclude(balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=Value("rec",output_field=CharField()),object_module_id=F("id"),object_balance=F('balance'))
+                    Fin_Recurring_Invoice.objects.filter(Company=cmp,Customer=cust).exclude(balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=F('rec_invoice_no'),object_module_id=F("id"),object_balance=F('balance'))
                 )
 
             all_inv_data += pending_inv
@@ -51573,6 +51572,7 @@ def Fin_report_account_outstanding_payables(request):
                     "total_count":tot_count,
                     "sub_module":pending_inv,
                 })
+                customers_count+=1
 
         context = {
             'allmodules':allmodules, 'com':com, 'cmp':cmp, 'data':data,
@@ -51585,11 +51585,182 @@ def Fin_report_account_outstanding_payables(request):
             "start_date":start_date,
             "end_date":end_date,
         }
+        return render(request,'company/reports/Fin_report_account_outstanding_receivable.html', context)
+    else:
+        return redirect('Fin_index')
+
+
+
+
+def Fin_report_account_outstanding_receivable_tomail(request):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        data = Fin_Login_Details.objects.get(id = s_id)
+        if data.User_Type == 'Company':
+            cmp = Fin_Company_Details.objects.get(Login_Id=s_id)
+        else:
+            cmp = Fin_Staff_Details.objects.get(Login_Id = s_id).company_id
+        
+        try:
+            if request.method == 'POST':
+                emails_string = request.POST['email_ids']
+
+                # Split the string by commas and remove any leading or trailing whitespace
+                emails_list = [email.strip() for email in emails_string.split(',')]
+                email_message = request.POST['email_message']
+                # print(emails_list)
+            
+                cust = Fin_Customers.objects.filter(Company=cmp)
+                start_date = request.POST['start']
+                end_date = request.POST['end']
+                status = request.POST['status']
+                report = request.POST['report']
+                
+
+                all_data = []
+                customers = Fin_Customers.objects.filter(Company=cmp)
+                
+                pending_inv = list()
+                all_inv_data = list()
+                grand_tot_balance=customers_count=0
+                for cust in customers:
+
+                    if request.method == "POST" and start_date!='' and end_date!='':
+                        pending_inv = list(
+                            Fin_Invoice.objects.filter(Company=cmp,Customer=cust,invoice_date__range=[start_date,end_date]).exclude(balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=F("invoice_no"),object_module_id=F("id"),object_balance=F('balance'))
+                        )+list(
+                            Fin_Retainer_Invoice.objects.filter(Company=cmp,Customer=cust,Retainer_Invoice_date__range=[start_date,end_date]).exclude(Balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=F('Retainer_Invoice_number'),object_module_id=F("id"),object_balance=F('Balance'))
+                        )+list(
+                            Fin_Recurring_Invoice.objects.filter(Company=cmp,Customer=cust,start_date__range=[start_date,end_date]).exclude(balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=F('rec_invoice_no'),object_module_id=F("id"),object_balance=F('balance'))
+                        )
+                    else:
+                        pending_inv = list(
+                            Fin_Invoice.objects.filter(Company=cmp,Customer=cust).exclude(balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=F("invoice_no"),object_module_id=F("id"),object_balance=F('balance'))
+                        )+list(
+                            Fin_Retainer_Invoice.objects.filter(Company=cmp,Customer=cust).exclude(Balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=F('Retainer_Invoice_number'),object_module_id=F("id"),object_balance=F('Balance'))
+                        )+list(
+                            Fin_Recurring_Invoice.objects.filter(Company=cmp,Customer=cust).exclude(balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=F('rec_invoice_no'),object_module_id=F("id"),object_balance=F('balance'))
+                        )
+
+                    all_inv_data += pending_inv
+
+                    tot_count = 0
+                    tot_balance =0
+                    for p_inv in pending_inv:
+                        tot_count += int(p_inv.object_count)
+                        tot_balance += float(p_inv.object_balance)
+                    grand_tot_balance += tot_balance
+                    if tot_count != 0:
+                        all_data.append({
+                            "customer_name":cust.first_name,
+                            "tot_balance":tot_balance,
+                            "total_count":tot_count,
+                            "sub_module":pending_inv,
+                        })
+                        customers_count+=1
+
+                context = {
+                    'cmp':cmp, 'cmp':cmp, 'data':data,
+                    'startDate':None, 'endDate':None,
+                    "pending_inv":pending_inv,
+                    "all_data":all_data,
+                    "all_inv_data":all_inv_data,
+                    'customers_count':customers_count,
+                    'grand_tot_balance':grand_tot_balance,
+                    "start_date":start_date,
+                    "end_date":end_date,
+                }
+                template_path = 'company/reports/Fin_report_account_outstanding_receivable_tomail_pdf.html'
+                template = get_template(template_path)
+
+                html  = template.render(context)
+                result = BytesIO()
+                pdf = pisa.pisaDocument(BytesIO(html.encode("ISO-8859-1")), result)
+                pdf = result.getvalue()
+                filename = f'Report_Outstanding_Payables'
+                subject = f"Report_Outstanding_Payables"
+                email = EmailMessage(subject, f"Hi,\nPlease find the attached Report for - Outstanding Payables. \n{email_message}\n\n--\nRegards,\n{cmp.Company_name}\n{cmp.Address}\n{cmp.State} - {cmp.Country}\n{cmp.Contact}", from_email=settings.EMAIL_HOST_USER, to=emails_list)
+                email.attach(filename, pdf, "application/pdf")
+                email.send(fail_silently=False)
+
+                messages.success(request, 'Report has been shared via email successfully..!')
+                return redirect("Fin_report_account_outstanding_receivable")
+        except Exception as e:
+            print(e)
+            messages.error(request, f'{e}')
+            return redirect("Fin_report_account_outstanding_receivable")
+
+
+def Fin_report_account_outstanding_payables(request):
+    if 's_id' in request.session:
+        s_id = request.session['s_id']
+        data = Fin_Login_Details.objects.get(id = s_id)
+        if data.User_Type == "Company":
+            com = Fin_Company_Details.objects.get(Login_Id = s_id)
+            cmp = com
+        else:
+            com = Fin_Staff_Details.objects.get(Login_Id = s_id)
+            cmp = com.company_id
+        
+        allmodules = Fin_Modules_List.objects.get(company_id = cmp,status = 'New')
+
+        currentDate = datetime.today()
+
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+
+        all_data = []
+        vendors = Fin_Vendors.objects.filter(Company=cmp)
+         
+        pending_inv = list()
+        all_inv_data = list()
+        grand_tot_balance =vendors_count=0
+        for vend in vendors:
+
+            if request.method == "POST" and start_date!='' and end_date!='':
+                pending_inv = list(
+                    Fin_Purchase_Bill.objects.filter(company=cmp,vendor=vend,bill_date__range=[start_date,end_date]).exclude(balance=0).annotate(object_cust_name=F("vendor__first_name"),object_count=Count('id'),object_module=F("bill_no"),object_module_id=F("id"),object_balance=F('balance'))
+                )+list(
+                    Fin_Recurring_Bills.objects.filter(company=cmp,vendor=vend,date__range=[start_date,end_date]).exclude(balance=0).annotate(object_cust_name=F("vendor__first_name"),object_count=Count('id'),object_module=F('recurring_bill_number'),object_module_id=F("id"),object_balance=F('balance'))
+                )
+            else:
+                pending_inv = list(
+                    Fin_Purchase_Bill.objects.filter(company=cmp,vendor=vend).exclude(balance=0).annotate(object_cust_name=F("vendor__first_name"),object_count=Count('id'),object_module=F("bill_no"),object_module_id=F("id"),object_balance=F('balance'))
+                )+list(
+                    Fin_Recurring_Bills.objects.filter(company=cmp,vendor=vend).exclude(balance=0).annotate(object_cust_name=F("vendor__first_name"),object_count=Count('id'),object_module=F('recurring_bill_number'),object_module_id=F("id"),object_balance=F('balance'))
+                )
+
+            all_inv_data += pending_inv
+
+            tot_count = 0
+            tot_balance =0
+            for p_inv in pending_inv:
+                tot_count += int(p_inv.object_count)
+                tot_balance += float(p_inv.object_balance)
+            grand_tot_balance += tot_balance
+            if tot_count != 0:
+                all_data.append({
+                    "vendor_name":vend.first_name,
+                    "tot_balance":tot_balance,
+                    "total_count":tot_count,
+                    "sub_module":pending_inv,
+                })
+                vendors_count += 1
+
+        context = {
+            'allmodules':allmodules, 'com':com, 'cmp':cmp, 'data':data,
+            'startDate':None, 'endDate':None,
+            "pending_inv":pending_inv,
+            "all_data":all_data,
+            "all_inv_data":all_inv_data,
+            'vendors_count':vendors_count,
+            'grand_tot_balance':grand_tot_balance,
+            "start_date":start_date,
+            "end_date":end_date,
+        }
         return render(request,'company/reports/Fin_report_account_outstanding_payables.html', context)
     else:
-        return redirect('/')
-
-
+        return redirect('Fin_index')
 
 
 def Fin_report_account_outstanding_payables_tomail(request):
@@ -51609,39 +51780,32 @@ def Fin_report_account_outstanding_payables_tomail(request):
                 emails_list = [email.strip() for email in emails_string.split(',')]
                 email_message = request.POST['email_message']
                 # print(emails_list)
-                cust = Fin_Customers.objects.filter(Company=cmp)
-            
-                cust = Fin_Customers.objects.filter(Company=cmp)
+                currentDate = datetime.today()
+
                 start_date = request.POST['start']
                 end_date = request.POST['end']
                 status = request.POST['status']
                 report = request.POST['report']
-                
 
                 all_data = []
-                customers = Fin_Customers.objects.filter(Company=cmp)
-                customers_count = customers.count()
+                vendors = Fin_Vendors.objects.filter(Company=cmp)
                 
                 pending_inv = list()
                 all_inv_data = list()
-                grand_tot_balance=0
-                for cust in customers:
+                grand_tot_balance =vendors_count=0
+                for vend in vendors:
 
                     if request.method == "POST" and start_date!='' and end_date!='':
                         pending_inv = list(
-                            Fin_Invoice.objects.filter(Company=cmp,Customer=cust,invoice_date__range=[start_date,end_date]).exclude(balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=F("invoice_no"),object_module_id=F("id"),object_balance=F('balance'))
+                            Fin_Purchase_Bill.objects.filter(company=cmp,vendor=vend,bill_date__range=[start_date,end_date]).exclude(balance=0).annotate(object_cust_name=F("vendor__first_name"),object_count=Count('id'),object_module=F("bill_no"),object_module_id=F("id"),object_balance=F('balance'))
                         )+list(
-                            Fin_Retainer_Invoice.objects.filter(Company=cmp,Customer=cust,Retainer_Invoice_date__range=[start_date,end_date]).exclude(Balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=Value("ret",output_field=CharField()),object_module_id=F("id"),object_balance=F('Balance'))
-                        )+list(
-                            Fin_Recurring_Invoice.objects.filter(Company=cmp,Customer=cust,start_date__range=[start_date,end_date]).exclude(balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=Value("rec",output_field=CharField()),object_module_id=F("id"),object_balance=F('balance'))
+                            Fin_Recurring_Bills.objects.filter(company=cmp,vendor=vend,date__range=[start_date,end_date]).exclude(balance=0).annotate(object_cust_name=F("vendor__first_name"),object_count=Count('id'),object_module=F('recurring_bill_number'),object_module_id=F("id"),object_balance=F('balance'))
                         )
                     else:
                         pending_inv = list(
-                            Fin_Invoice.objects.filter(Company=cmp,Customer=cust).exclude(balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=F("invoice_no"),object_module_id=F("id"),object_balance=F('balance'))
+                            Fin_Purchase_Bill.objects.filter(company=cmp,vendor=vend).exclude(balance=0).annotate(object_cust_name=F("vendor__first_name"),object_count=Count('id'),object_module=F("bill_no"),object_module_id=F("id"),object_balance=F('balance'))
                         )+list(
-                            Fin_Retainer_Invoice.objects.filter(Company=cmp,Customer=cust).exclude(Balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=Value("ret",output_field=CharField()),object_module_id=F("id"),object_balance=F('Balance'))
-                        )+list(
-                            Fin_Recurring_Invoice.objects.filter(Company=cmp,Customer=cust).exclude(balance=0).annotate(object_cust_name=F("Customer__first_name"),object_count=Count('id'),object_module=Value("rec",output_field=CharField()),object_module_id=F("id"),object_balance=F('balance'))
+                            Fin_Recurring_Bills.objects.filter(company=cmp,vendor=vend).exclude(balance=0).annotate(object_cust_name=F("vendor__first_name"),object_count=Count('id'),object_module=F('recurring_bill_number'),object_module_id=F("id"),object_balance=F('balance'))
                         )
 
                     all_inv_data += pending_inv
@@ -51654,24 +51818,25 @@ def Fin_report_account_outstanding_payables_tomail(request):
                     grand_tot_balance += tot_balance
                     if tot_count != 0:
                         all_data.append({
-                            "customer_name":cust.first_name,
+                            "vendor_name":vend.first_name,
                             "tot_balance":tot_balance,
                             "total_count":tot_count,
                             "sub_module":pending_inv,
                         })
+                        vendors_count += 1
 
                 context = {
-                    'cmp':cmp, 'cmp':cmp, 'data':data,
+                    'cmp':cmp, 'data':data,
                     'startDate':None, 'endDate':None,
                     "pending_inv":pending_inv,
                     "all_data":all_data,
                     "all_inv_data":all_inv_data,
-                    'customers_count':customers_count,
+                    'vendors_count':vendors_count,
                     'grand_tot_balance':grand_tot_balance,
                     "start_date":start_date,
                     "end_date":end_date,
                 }
-                template_path = 'company/reports/Fin_report_account_outstanding_payables_tomail_pdf.html'
+                template_path = 'company/reports/Fin_report_account_outstanding_receivable_tomail_pdf.html'
                 template = get_template(template_path)
 
                 html  = template.render(context)
